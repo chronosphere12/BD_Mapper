@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Black Division ルートマッパー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e2dfd6; --panel:#f0eee7; --ink:#1f2427; --muted:#5a6165; --line:#b8b4a6;
+  --bd:#b3261e; --danger:#b8740e; --note:#4d6b86; --grid:#ccc7b7; --mapbg:#d8d4c6;
+  --field:#fbfaf6; --press:#1f2427; --pressInk:#f0eee7; --mark:#1f2427;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141719; --panel:#1d2226; --ink:#dcd6c6; --muted:#8c938f; --line:#363f44;
+    --bd:#ff5b4b; --danger:#e8a33d; --note:#8fb3d4; --grid:#262d31; --mapbg:#181c1f;
+    --field:#141719; --press:#dcd6c6; --pressInk:#141719; --mark:#0c0e0f;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141719; --panel:#1d2226; --ink:#dcd6c6; --muted:#8c938f; --line:#363f44;
+  --bd:#ff5b4b; --danger:#e8a33d; --note:#8fb3d4; --grid:#262d31; --mapbg:#181c1f;
+  --field:#141719; --press:#dcd6c6; --pressInk:#141719; --mark:#0c0e0f;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 "Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;display:flex;flex-direction:column}
+.cond{font-family:"Saira Condensed","Arial Narrow",sans-serif;font-variant-numeric:tabular-nums}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;background:transparent;border:1px solid var(--line);border-radius:4px;padding:5px 10px;line-height:1.3}
+button:hover{border-color:var(--ink)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--bd);outline-offset:1px}
+button[aria-pressed="true"]{background:var(--press);color:var(--pressInk);border-color:var(--press)}
+input,textarea,select{background:var(--field);border:1px solid var(--line);border-radius:4px;padding:4px 6px;min-width:0}
+
+header{display:flex;align-items:center;gap:10px 20px;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+h1{font-family:"Saira Condensed","Arial Narrow",sans-serif;font-weight:700;font-size:25px;line-height:1;margin:0}
+h1 span{display:inline-block;background:var(--ink);color:var(--bg);padding:1px 6px 2px;margin-right:6px;border-radius:2px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tabs button{font-family:"Saira Condensed","Arial Narrow",sans-serif;font-size:16.5px;padding:2px 12px}
+
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 380px;min-height:0}
+.stage{position:relative;min-height:0;background:var(--mapbg);overflow:hidden}
+#map{width:100%;height:100%;display:block;touch-action:none;cursor:grab;user-select:none}
+#map.adding{cursor:crosshair}
+.tools{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none}
+.tools>div{display:flex;gap:4px;flex-wrap:wrap;background:var(--panel);padding:4px;border:1px solid var(--line);border-radius:6px;pointer-events:auto}
+.tools .ico{display:inline-block;width:11px;height:11px;margin-right:5px;vertical-align:-1px}
+#drawBar{background:var(--bd);border-color:var(--bd);color:#fff;align-items:center;padding:4px 4px 4px 10px;font-size:13.5px}
+#drawBar button{border-color:#fff;color:#fff}
+#drawBar[hidden]{display:none}
+.legend{position:absolute;right:12px;bottom:12px;display:flex;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:12.5px}
+.legend label{display:flex;align-items:center;gap:4px;cursor:pointer}
+.hint{position:absolute;left:12px;bottom:12px;max-width:min(430px,calc(100% - 24px));background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-size:13.5px}
+.hint p{margin:0 0 8px}
+.hint p:last-child{margin:0}
+.hint[hidden]{display:none}
+
+aside{overflow:auto;border-left:1px solid var(--line);background:var(--panel);padding:16px 18px 32px}
+section{padding:14px 0;border-bottom:1px solid var(--line)}
+section:first-child{padding-top:0}
+section:last-child{border-bottom:0}
+h2{font-size:14px;font-weight:700;margin:0 0 8px}
+.muted{color:var(--muted);font-size:13px}
+.intel{margin:0;padding-left:1.1em;font-size:13.5px}
+.intel li{margin-bottom:4px}
+.src{font-size:12px;color:var(--muted);margin:8px 0 0}
+
+#editor .field{display:grid;grid-template-columns:72px 1fr;gap:6px;align-items:center;margin-bottom:8px;font-size:13.5px}
+#editor .field>span{color:var(--muted)}
+#editor textarea{height:70px;resize:vertical}
+.kindTag{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-bottom:8px}
+.seen{display:flex;align-items:center;gap:10px}
+.seen b{font-size:28px;line-height:1}
+.swatches{display:flex;gap:6px}
+.swatches button{width:26px;height:26px;padding:0;border-radius:50%;border:2px solid transparent}
+.swatches button[aria-pressed="true"]{border-color:var(--ink);background:none}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px}
+
+#list{list-style:none;margin:0;padding:0}
+#list li{display:flex;align-items:center;gap:8px;padding:6px 6px;border-radius:4px;cursor:pointer;border:1px solid transparent;font-size:14px}
+#list li:hover{border-color:var(--line)}
+#list li.sel{border-color:var(--ink)}
+#list li .meta{margin-left:auto;font-size:12.5px;color:var(--muted);white-space:nowrap}
+#list svg{flex:none}
+.empty{font-size:13.5px;color:var(--muted);margin:0}
+
+textarea#io{width:100%;height:90px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;resize:vertical}
+label.file{display:inline-block;border:1px solid var(--line);border-radius:4px;padding:5px 10px;cursor:pointer;line-height:1.3}
+label.file:hover{border-color:var(--ink)}
+label.file:focus-within{outline:2px solid var(--bd)}
+label.file input{position:absolute;opacity:0;width:1px;height:1px}
+
+@media (max-width:840px){
+  html,body{height:auto}
+  main{grid-template-columns:1fr;grid-template-rows:64vh auto}
+  aside{border-left:0;border-top:1px solid var(--line);overflow:visible}
+  .legend{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>BD</span>Black Division Mapper</h1>
+  <nav class="tabs" id="tabs" aria-label="マップ切り替え"></nav>
+</header>
+
+<main>
+  <div class="stage">
+    <svg id="map" aria-label="マップ">
+      <defs>
+        <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+          <path d="M50 0H0V50" fill="none" style="stroke:var(--grid)" stroke-width="1"/>
+        </pattern>
+      </defs>
+      <g id="vp">
+        <rect id="bg" x="0" y="0" width="1000" height="1000" fill="url(#grid)"/>
+        <image id="mapimg" x="0" y="0" preserveAspectRatio="none" style="display:none"/>
+        <g id="routes"></g>
+        <g id="marks"></g>
+      </g>
+    </svg>
+
+    <div class="tools">
+      <div role="group" aria-label="操作モード" id="modes">
+        <button data-mode="select" aria-pressed="true">選択・移動</button>
+        <button data-mode="spawn" aria-pressed="false"><svg class="ico" viewBox="-7 -7 14 14"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--mark);stroke:var(--bd)" stroke-width="2"/></svg>出現地点</button>
+        <button data-mode="route" aria-pressed="false"><svg class="ico" viewBox="0 0 14 14"><path d="M1 12L6 5 13 3" fill="none" style="stroke:var(--bd)" stroke-width="2.5"/></svg>巡回ルート</button>
+        <button data-mode="danger" aria-pressed="false"><svg class="ico" viewBox="-7 -7 14 14"><path d="M0-6L6 5H-6Z" style="fill:var(--danger)"/></svg>注意地点</button>
+        <button data-mode="note" aria-pressed="false"><svg class="ico" viewBox="-7 -7 14 14"><circle r="5.5" style="fill:var(--note)"/></svg>メモ</button>
+      </div>
+      <div>
+        <button id="btnDelSel">選択を削除</button>
+        <button id="btnFit">全体を表示</button>
+      </div>
+      <div id="drawBar" hidden>
+        ルートを描画中:クリックで点を追加
+        <button id="btnUndoPt">1点戻す</button>
+        <button id="btnFinish">完了</button>
+      </div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+
+    <div class="hint" id="hint">
+      <p><b>このマップにはまだ何もありません。</b>右のパネルから地図画像を読み込み、上のツールで出現地点や巡回ルートを置いていきます。</p>
+      <p>巡回ルートは、点を順にクリックして「完了」(またはEnter)で確定します。向きは矢印で表示されます。</p>
+    </div>
+  </div>
+
+  <aside>
+    <section id="editor"></section>
+
+    <section>
+      <h2 id="intelTitle">参考情報</h2>
+      <ul class="intel" id="intel"></ul>
+      <p class="src">攻略サイト等の情報をもとにした目安です。パッチやイベントで変わるので、実際に確認した内容で上書きしてください。</p>
+    </section>
+
+    <section>
+      <h2>このマップの記録</h2>
+      <ul id="list"></ul>
+      <p class="empty" id="listEmpty">まだ何も置かれていません。</p>
+    </section>
+
+    <section>
+      <h2>地図画像</h2>
+      <p class="muted" style="margin:0 0 8px">ゲーム内マップのスクリーンショットなど。画像はこのブラウザ内にだけ保存されます。</p>
+      <div class="row" style="margin-top:0">
+        <label class="file">画像を選ぶ<input type="file" id="fileIn" accept="image/*"></label>
+        <button id="btnImgClear">画像を外す</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>データの共有</h2>
+      <p class="muted" style="margin:0 0 8px">書き出したテキストを仲間に渡すと、同じ記録を読み込めます。読み込むと現在のマップの記録は置き換わります。</p>
+      <textarea id="io" spellcheck="false" aria-label="マップデータ"></textarea>
+      <div class="row">
+        <button id="btnExport">書き出す</button>
+        <button id="btnCopy">コピー</button>
+        <button id="btnImport">貼り付けたデータを読み込む</button>
+        <button id="btnClear">このマップを空にする</button>
+      </div>
+      <p class="muted" id="ioMsg" style="margin:8px 0 0;min-height:1.4em"></p>
+    </section>
+  </aside>
+</main>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const KEY='bd-mapper-v1';
+const MAPS=[
+  ['streets','Streets of Tarkov',[
+    'スポーンチャンス 40%',
+    'Concordia付近(公園の向かい)や工事現場側での目撃情報'
+  ]],
+  ['woods','Woods',[
+    'スポーンチャンス 40%',
+    '具体的な出現地点の情報は少なめ'
+  ]],
+  ['groundzero','Ground Zero',[
+    'スポーンチャンス 40%(レベル21以上)',
+    'TerraGroup本社前の公園、地下トンネル内での目撃情報'
+  ]],
+  ['shoreline','Shoreline',[
+    'スポーンチャンス 40%',
+    'Health Resort内での目撃情報、夜間に出やすいとされる'
+  ]]
+];
+const KINDS={spawn:'出現地点',route:'巡回ルート',danger:'注意地点',note:'メモ'};
+const COLORS=['#d9412f','#e8a33d','#3f8fd6','#8fae57','#a860d0'];
+const CONDS={any:'昼夜問わず',night:'夜のみ',day:'昼のみ',event:'イベント限定'};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp=v=>Math.min(1,Math.max(0,v));
+
+/* ---------- state ---------- */
+let store={maps:{},show:{spawn:true,route:true,danger:true,note:true}};
+try{const raw=localStorage.getItem(KEY);if(raw){const p=JSON.parse(raw);if(p&&p.maps)store=Object.assign(store,p);}}catch(e){}
+MAPS.forEach(([id])=>{if(!store.maps[id])store.maps[id]={items:[]};});
+let cur=MAPS.some(m=>m[0]===store.cur)?store.cur:'streets';
+const Mp=()=>store.maps[cur];
+const items=()=>Mp().items;
+function save(){store.cur=cur;try{localStorage.setItem(KEY,JSON.stringify(store));}catch(e){}}
+let mode='select',sel=null,drawing=null,W=1000,H=1000;
+const view={s:1,tx:0,ty:0};
+const find=id=>items().find(i=>i.id===id);
+
+/* ---------- image storage ---------- */
+let dbp=null;
+function db(){if(!dbp)dbp=new Promise((res,rej)=>{try{const r=indexedDB.open('bd-mapper',1);r.onupgradeneeded=()=>r.result.createObjectStore('img');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e)}});return dbp;}
+async function idb(op,id,val){try{const d=await db();return await new Promise(res=>{const t=d.transaction('img',op==='get'?'readonly':'readwrite');const st=t.objectStore('img');const q=op==='get'?st.get(id):op==='put'?st.put(val,id):st.delete(id);q.onsuccess=()=>res(op==='get'?(q.result||null):true);q.onerror=()=>res(null);});}catch(e){return null}}
+
+const svg=$('#map'),vp=$('#vp'),bg=$('#bg'),mapimg=$('#mapimg'),routesG=$('#routes'),marksG=$('#marks');
+
+/* ---------- tabs & intel ---------- */
+function renderTabs(){
+  $('#tabs').innerHTML=MAPS.map(([id,n])=>`<button data-map="${id}" aria-pressed="${id===cur}">${n}</button>`).join('');
+  const m=MAPS.find(x=>x[0]===cur);
+  $('#intelTitle').textContent=m[1]+'の参考情報';
+  $('#intel').innerHTML=m[2].map(t=>`<li>${esc(t)}</li>`).join('');
+}
+$('#tabs').addEventListener('click',e=>{
+  const b=e.target.closest('[data-map]');if(!b||b.dataset.map===cur)return;
+  finishDrawing();cur=b.dataset.map;sel=null;save();renderTabs();loadImage();renderSide();render();
+});
+
+/* ---------- legend (layer toggles) ---------- */
+function renderLegend(){
+  $('#legend').innerHTML=Object.entries(KINDS).map(([k,n])=>`<label><input type="checkbox" data-layer="${k}" ${store.show[k]!==false?'checked':''}>${n}</label>`).join('');
+}
+$('#legend').addEventListener('change',e=>{const k=e.target.dataset.layer;if(!k)return;store.show[k]=e.target.checked;save();render();});
+
+/* ---------- image ---------- */
+let imgURL=null,imgToken=0;
+async function loadImage(){
+  const token=++imgToken;const blob=await idb('get',cur);if(token!==imgToken)return;
+  if(imgURL){URL.revokeObjectURL(imgURL);imgURL=null;}
+  if(!blob){W=H=1000;mapimg.style.display='none';mapimg.removeAttribute('href');fit();render();return;}
+  imgURL=URL.createObjectURL(blob);const im=new Image();
+  im.onload=()=>{if(token!==imgToken)return;W=im.naturalWidth||1000;H=im.naturalHeight||1000;
+    mapimg.setAttribute('href',imgURL);mapimg.setAttribute('width',W);mapimg.setAttribute('height',H);mapimg.style.display='';fit();render();};
+  im.onerror=()=>{W=H=1000;mapimg.style.display='none';fit();render();};
+  im.src=imgURL;
+}
+$('#fileIn').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;await idb('put',cur,f);e.target.value='';loadImage();});
+$('#btnImgClear').addEventListener('click',async()=>{await idb('del',cur);loadImage();});
+
+/* ---------- view ---------- */
+function fit(){const r=svg.getBoundingClientRect();if(!r.width||!r.height)return;const s=Math.min(r.width/W,r.height/H)*0.9;view.s=s;view.tx=(r.width-W*s)/2;view.ty=(r.height-H*s)/2+18;}
+function zoomAt(cx,cy,f){const r=svg.getBoundingClientRect();const s=Math.min(40,Math.max(0.05,view.s*f));const wx=(cx-r.left-view.tx)/view.s,wy=(cy-r.top-view.ty)/view.s;view.s=s;view.tx=cx-r.left-wx*s;view.ty=cy-r.top-wy*s;render();}
+function toWorld(cx,cy){const r=svg.getBoundingClientRect();return{x:(cx-r.left-view.tx)/view.s,y:(cy-r.top-view.ty)/view.s};}
+$('#btnFit').addEventListener('click',()=>{fit();render();});
+new ResizeObserver(()=>{fit();render();}).observe(svg);
+
+/* ---------- render map ---------- */
+function arrowsFor(pts,k,color){
+  let out='';
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1],b=pts[i],len=Math.hypot(b.x-a.x,b.y-a.y);if(len<30*k)continue;
+    const mx=(a.x+b.x)/2,my=(a.y+b.y)/2,ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;
+    out+=`<path d="M${-6*k} ${-6*k}L${6*k} 0L${-6*k} ${6*k}" fill="none" stroke="${color}" stroke-width="${3*k}" stroke-linecap="round" stroke-linejoin="round" transform="translate(${mx} ${my}) rotate(${ang})"/>`;
+  }
+  return out;
+}
+function render(){
+  vp.setAttribute('transform',`translate(${view.tx},${view.ty}) scale(${view.s})`);
+  bg.setAttribute('width',W);bg.setAttribute('height',H);
+  const k=1/view.s,show=store.show;
+  const label=(x,y,t)=>t?`<text x="${x+15*k}" y="${y+5*k}" font-size="${13*k}" font-weight="700" style="fill:var(--ink);stroke:var(--mapbg);paint-order:stroke" stroke-width="${4*k}" stroke-linejoin="round">${esc(t)}</text>`:'';
+  // routes
+  routesG.innerHTML=items().filter(i=>i.kind==='route'&&show.route!==false).map(r=>{
+    const pts=r.pts.map(p=>({x:p.x*W,y:p.y*H}));if(!pts.length)return'';
+    const all=r.loop&&pts.length>2?[...pts,pts[0]]:pts;
+    const d='M'+all.map(p=>`${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join('L');
+    const isSel=r.id===sel,c=r.color||COLORS[0];
+    let s=`<g data-id="${r.id}" style="cursor:pointer">
+      <path d="${d}" fill="none" stroke="transparent" stroke-width="${18*k}" stroke-linejoin="round"/>
+      <path d="${d}" fill="none" style="stroke:var(--mapbg)" stroke-width="${(isSel?10:8)*k}" stroke-linejoin="round" stroke-linecap="round" opacity=".75"/>
+      <path d="${d}" fill="none" stroke="${c}" stroke-width="${(isSel?5:4)*k}" stroke-linejoin="round" stroke-linecap="round"/>
+      ${arrowsFor(all,k,c)}
+      ${label(pts[0].x,pts[0].y-14*k,r.name)}
+      <circle cx="${pts[0].x}" cy="${pts[0].y}" r="${5*k}" fill="${c}" style="stroke:var(--mapbg)" stroke-width="${2*k}"/>
+    </g>`;
+    if(isSel)s+=pts.map((p,i)=>`<circle data-id="${r.id}" data-pt="${i}" cx="${p.x}" cy="${p.y}" r="${6*k}" style="fill:var(--panel);cursor:move" stroke="${c}" stroke-width="${2.5*k}"/>`).join('');
+    return s;
+  }).join('');
+  // markers
+  marksG.innerHTML=items().filter(i=>i.kind!=='route'&&show[i.kind]!==false).map(m=>{
+    const x=m.x*W,y=m.y*H,isSel=m.id===sel;
+    let shape='';
+    if(m.kind==='spawn')shape=`<path d="M${x} ${y-11*k}L${x+11*k} ${y}L${x} ${y+11*k}L${x-11*k} ${y}Z" style="fill:var(--mark);stroke:var(--bd)" stroke-width="${3*k}"/>`+(m.count?`<text x="${x}" y="${y+4*k}" text-anchor="middle" font-size="${11*k}" font-weight="700" style="fill:#fff" font-family="Saira Condensed, Arial Narrow, sans-serif">${esc(m.count)}</text>`:'');
+    else if(m.kind==='danger')shape=`<path d="M${x} ${y-11*k}L${x+11*k} ${y+8*k}H${x-11*k}Z" style="fill:var(--danger);stroke:var(--mapbg)" stroke-width="${2*k}" stroke-linejoin="round"/><text x="${x}" y="${y+5.5*k}" text-anchor="middle" font-size="${11*k}" font-weight="700" style="fill:var(--mark)">!</text>`;
+    else shape=`<circle cx="${x}" cy="${y}" r="${8*k}" style="fill:var(--note);stroke:var(--mapbg)" stroke-width="${2*k}"/>`;
+    return `<g data-id="${m.id}" style="cursor:move">${isSel?`<circle cx="${x}" cy="${y}" r="${17*k}" fill="none" style="stroke:var(--ink)" stroke-width="${2*k}" stroke-dasharray="${4*k} ${3*k}"/>`:''}<circle cx="${x}" cy="${y}" r="${14*k}" fill="transparent"/>${shape}${label(x,y,m.name)}</g>`;
+  }).join('');
+  $('#hint').hidden=items().length>0;
+}
+
+/* ---------- pointer ---------- */
+const pts=new Map();let drag=null,pinch=null;
+svg.addEventListener('pointerdown',e=>{
+  svg.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pts.size===2){const [a,b]=[...pts.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,s:view.s,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,tx:view.tx,ty:view.ty};drag=null;return;}
+  const g=drawing?null:e.target.closest('[data-id]');
+  if(g){
+    const it=find(g.dataset.id);
+    const pt=g.dataset.pt!=null?+g.dataset.pt:null;
+    const movable=it&&(it.kind!=='route'||pt!=null);
+    drag={type:movable?'node':'pan',id:g.dataset.id,pt,sx:e.clientX,sy:e.clientY,tx0:view.tx,ty0:view.ty,moved:false,picked:true};
+    if(sel!==g.dataset.id){sel=g.dataset.id;render();renderSide();}
+  }else drag={type:'pan',sx:e.clientX,sy:e.clientY,tx0:view.tx,ty0:view.ty,moved:false};
+});
+svg.addEventListener('pointermove',e=>{
+  if(!pts.has(e.pointerId))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&pts.size===2){const [a,b]=[...pts.values()],r=svg.getBoundingClientRect();const s=Math.min(40,Math.max(0.05,pinch.s*Math.hypot(a.x-b.x,a.y-b.y)/pinch.d));const wx=(pinch.cx-r.left-pinch.tx)/pinch.s,wy=(pinch.cy-r.top-pinch.ty)/pinch.s;view.s=s;view.tx=(a.x+b.x)/2-r.left-wx*s;view.ty=(a.y+b.y)/2-r.top-wy*s;render();return;}
+  if(!drag)return;const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
+  if(Math.hypot(dx,dy)>4)drag.moved=true;if(!drag.moved)return;
+  if(drag.type==='pan'){view.tx=drag.tx0+dx;view.ty=drag.ty0+dy;render();return;}
+  const it=find(drag.id);if(!it)return;const w=toWorld(e.clientX,e.clientY);
+  if(drag.pt!=null){it.pts[drag.pt]={x:clamp(w.x/W),y:clamp(w.y/H)};}else{it.x=clamp(w.x/W);it.y=clamp(w.y/H);}
+  render();
+});
+function endPointer(e){
+  pts.delete(e.pointerId);
+  if(pinch){if(pts.size<2)pinch=null;drag=null;return;}
+  if(!drag)return;
+  if(drag.type==='node'&&drag.moved)save();
+  if(!drag.moved&&!drag.picked&&e.type==='pointerup'){
+    const w=toWorld(e.clientX,e.clientY);
+    if(mode==='select'){sel=null;render();renderSide();}
+    else if(mode==='route')addRoutePoint(w.x,w.y);
+    else addMarker(w.x,w.y);
+  }
+  drag=null;
+}
+svg.addEventListener('pointerup',endPointer);
+svg.addEventListener('pointercancel',endPointer);
+svg.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,Math.exp(-e.deltaY*0.0015));},{passive:false});
+
+/* ---------- editing ---------- */
+function nextName(kind){return KINDS[kind]+' '+(items().filter(i=>i.kind===kind).length+1);}
+function addMarker(wx,wy){
+  const x=wx/W,y=wy/H;if(x<0||x>1||y<0||y>1)return;
+  const it={id:uid(),kind:mode,x,y,name:nextName(mode),note:''};
+  if(mode==='spawn'){it.cond='any';it.count='';it.seen=0;it.last='';}
+  if(mode==='danger'){it.seen=0;it.last='';}
+  items().push(it);sel=it.id;save();render();renderSide();
+}
+function addRoutePoint(wx,wy){
+  const x=wx/W,y=wy/H;if(x<0||x>1||y<0||y>1)return;
+  let r=drawing&&find(drawing);
+  if(!r){r={id:uid(),kind:'route',name:nextName('route'),note:'',cond:'any',loop:false,color:COLORS[items().filter(i=>i.kind==='route').length%COLORS.length],pts:[]};items().push(r);drawing=r.id;sel=r.id;$('#drawBar').hidden=false;}
+  r.pts.push({x,y});save();render();renderSide();
+}
+function finishDrawing(){
+  if(!drawing)return;const r=find(drawing);drawing=null;$('#drawBar').hidden=true;
+  if(r&&r.pts.length<2){Mp().items=items().filter(i=>i.id!==r.id);if(sel===r.id)sel=null;}
+  save();render();renderSide();
+}
+$('#btnFinish').addEventListener('click',finishDrawing);
+$('#btnUndoPt').addEventListener('click',()=>{const r=drawing&&find(drawing);if(!r)return;r.pts.pop();if(!r.pts.length){finishDrawing();return;}save();render();});
+function delSel(){
+  if(!sel)return;if(drawing===sel){drawing=null;$('#drawBar').hidden=true;}
+  Mp().items=items().filter(i=>i.id!==sel);sel=null;save();render();renderSide();
+}
+$('#btnDelSel').addEventListener('click',delSel);
+function setMode(m){
+  if(m!=='route')finishDrawing();mode=m;
+  document.querySelectorAll('[data-mode]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.mode===m));
+  svg.classList.toggle('adding',m!=='select');
+}
+$('#modes').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(b)setMode(b.dataset.mode);});
+document.addEventListener('keydown',e=>{
+  if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+  if(e.key==='Enter'&&drawing){e.preventDefault();finishDrawing();}
+  else if(e.key==='Escape'){if(drawing)finishDrawing();else{sel=null;render();renderSide();}}
+  else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();delSel();}
+});
+
+/* ---------- side panel ---------- */
+function iconFor(it){
+  if(it.kind==='spawn')return `<svg width="14" height="14" viewBox="-7 -7 14 14"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--mark);stroke:var(--bd)" stroke-width="2"/></svg>`;
+  if(it.kind==='danger')return `<svg width="14" height="14" viewBox="-7 -7 14 14"><path d="M0-6L6 5H-6Z" style="fill:var(--danger)"/></svg>`;
+  if(it.kind==='note')return `<svg width="14" height="14" viewBox="-7 -7 14 14"><circle r="5.5" style="fill:var(--note)"/></svg>`;
+  return `<svg width="14" height="14" viewBox="0 0 14 14"><path d="M1 12L6 5 13 3" fill="none" stroke="${it.color}" stroke-width="2.5"/></svg>`;
+}
+function renderSide(){
+  const it=sel&&find(sel);const ed=$('#editor');
+  if(!it){
+    ed.innerHTML=`<h2>使い方</h2><p class="muted" style="margin:0">上のツールを選んで地図をクリックすると配置できます。置いたものをクリックすると、ここで名前やメモ、出現条件、目撃回数を編集できます。</p>`;
+  }else{
+    const condSel=`<label class="field"><span>出現条件</span><select data-f="cond">${Object.entries(CONDS).map(([k,v])=>`<option value="${k}" ${it.cond===k?'selected':''}>${v}</option>`).join('')}</select></label>`;
+    ed.innerHTML=`
+      <div class="kindTag">${iconFor(it)}${KINDS[it.kind]}</div>
+      <label class="field"><span>名前</span><input data-f="name" value="${esc(it.name)}"></label>
+      ${it.kind==='spawn'?condSel+`<label class="field"><span>人数</span><input data-f="count" value="${esc(it.count)}" placeholder="例 3〜4"></label>`:''}
+      ${it.kind==='route'?condSel+`<div class="field"><span>色</span><div class="swatches">${COLORS.map(c=>`<button data-color="${c}" aria-pressed="${it.color===c}" style="background:${c}" aria-label="色 ${c}"></button>`).join('')}</div></div>
+        <label class="field"><span>形</span><span><label><input type="checkbox" data-f="loop" ${it.loop?'checked':''}> 始点に戻るループ</label></span></label>
+        <p class="muted" style="margin:0 0 8px">点(${it.pts.length}個)はドラッグで動かせます。${drawing===it.id?'':'<button id="btnExtend" style="margin-left:4px">点を追加する</button>'}</p>`:''}
+      <label class="field"><span>メモ</span><textarea data-f="note" placeholder="装備、動き方、トリガー条件など">${esc(it.note)}</textarea></label>
+      ${it.seen!=null?`<div class="field"><span>目撃</span><div class="seen"><b class="cond">${it.seen}</b><span class="muted">回${it.last?'(最終 '+esc(it.last)+')':''}</span><button id="btnSeen">+1 目撃した</button>${it.seen?'<button id="btnSeenUndo">−1</button>':''}</div></div>`:''}
+      <div class="row"><button id="btnDel2">削除</button></div>`;
+  }
+  // list
+  const list=items();
+  $('#listEmpty').hidden=list.length>0;
+  const order=['spawn','route','danger','note'];
+  $('#list').innerHTML=[...list].sort((a,b)=>order.indexOf(a.kind)-order.indexOf(b.kind)).map(i=>{
+    const meta=i.kind==='route'?(CONDS[i.cond]||''):i.kind==='spawn'?`${CONDS[i.cond]||''}${i.seen?' / 目撃'+i.seen:''}`:i.seen?'目撃'+i.seen:'';
+    return `<li data-id="${i.id}" class="${i.id===sel?'sel':''}">${iconFor(i)}<span>${esc(i.name)}</span><span class="meta">${esc(meta)}</span></li>`;
+  }).join('');
+}
+$('#editor').addEventListener('input',e=>{
+  const it=sel&&find(sel);const f=e.target.dataset.f;if(!it||!f)return;
+  it[f]=e.target.type==='checkbox'?e.target.checked:e.target.value;save();render();
+  if(f!=='note'&&f!=='name')renderSide();else refreshListRow(it);
+});
+function refreshListRow(it){const li=document.querySelector(`#list li[data-id="${it.id}"] span:not(.meta)`);if(li)li.textContent=it.name;}
+$('#editor').addEventListener('click',e=>{
+  const it=sel&&find(sel);if(!it)return;
+  if(e.target.dataset.color){it.color=e.target.dataset.color;save();render();renderSide();}
+  if(e.target.id==='btnSeen'){it.seen=(it.seen||0)+1;const d=new Date();it.last=`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;save();renderSide();}
+  if(e.target.id==='btnSeenUndo'){it.seen=Math.max(0,(it.seen||0)-1);save();renderSide();}
+  if(e.target.id==='btnDel2')delSel();
+  if(e.target.id==='btnExtend'){setMode('route');drawing=it.id;$('#drawBar').hidden=false;renderSide();}
+});
+$('#list').addEventListener('click',e=>{
+  const li=e.target.closest('li');if(!li)return;sel=li.dataset.id;
+  const it=find(sel);
+  if(it){const p=it.kind==='route'?it.pts[0]:it;const r=svg.getBoundingClientRect();
+    if(p){view.tx=r.width/2-p.x*W*view.s;view.ty=r.height/2-p.y*H*view.s;}}
+  render();renderSide();
+});
+
+/* ---------- import / export ---------- */
+const msg=t=>{$('#ioMsg').textContent=t;};
+const exportText=()=>JSON.stringify({app:'bd-mapper',map:cur,items:items()});
+$('#btnExport').addEventListener('click',()=>{$('#io').value=exportText();msg('書き出しました。コピーして渡してください。');});
+$('#btnCopy').addEventListener('click',async()=>{
+  const ta=$('#io');if(!ta.value)ta.value=exportText();
+  try{await navigator.clipboard.writeText(ta.value);msg('コピーしました。');}
+  catch(e){ta.focus();ta.select();msg('テキストを選択しました。Ctrl+C(⌘C)でコピーしてください。');}
+});
+$('#btnImport').addEventListener('click',()=>{
+  try{
+    const d=JSON.parse($('#io').value);if(!d||!Array.isArray(d.items))throw 0;
+    const ok=d.items.filter(i=>i&&KINDS[i.kind]).map(i=>{
+      const o={id:uid(),kind:i.kind,name:String(i.name||KINDS[i.kind]),note:String(i.note||'')};
+      if(i.kind==='route'){o.pts=(i.pts||[]).filter(p=>isFinite(p.x)&&isFinite(p.y)).map(p=>({x:clamp(+p.x),y:clamp(+p.y)}));o.loop=!!i.loop;o.color=COLORS.includes(i.color)?i.color:COLORS[0];o.cond=CONDS[i.cond]?i.cond:'any';}
+      else{o.x=clamp(+i.x||0);o.y=clamp(+i.y||0);}
+      if(i.kind==='spawn'){o.cond=CONDS[i.cond]?i.cond:'any';o.count=String(i.count||'');}
+      if(i.kind==='spawn'||i.kind==='danger'){o.seen=Math.max(0,+i.seen||0);o.last=String(i.last||'');}
+      return o;
+    }).filter(o=>o.kind!=='route'||o.pts.length>=2);
+    finishDrawing();
+    if(d.map&&MAPS.some(m=>m[0]===d.map)&&d.map!==cur){cur=d.map;renderTabs();loadImage();}
+    Mp().items=ok;sel=null;save();render();renderSide();
+    msg(`${MAPS.find(m=>m[0]===cur)[1]}に${ok.length}件を読み込みました。`);
+  }catch(e){msg('読み込めませんでした。書き出したテキストをそのまま貼り付けてください。');}
+});
+let armed=null;
+$('#btnClear').addEventListener('click',e=>{
+  const b=e.currentTarget;
+  if(!armed){b.textContent='もう一度押すと空にします';armed=setTimeout(()=>{b.textContent='このマップを空にする';armed=null;},3000);return;}
+  clearTimeout(armed);armed=null;b.textContent='このマップを空にする';
+  finishDrawing();Mp().items=[];sel=null;save();render();renderSide();msg('このマップの記録を空にしました。');
+});
+
+renderTabs();renderLegend();renderSide();loadImage();
+})();
+</script>
+</body>
+</html>
